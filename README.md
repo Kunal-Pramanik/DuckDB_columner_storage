@@ -31,9 +31,9 @@ The goal was to understand how low-level storage design impacts the performance 
 
 ---
 
-# 🧠 Important Background Concepts
+#  Important Background Concepts
 
-## 📦 Physical Blocks
+##  Physical Blocks
 
 Physical blocks are the smallest storage units managed by the database on disk.
 
@@ -63,7 +63,7 @@ Equivalent to:
 
 ---
 
-## 📊 Row Groups
+##  Row Groups
 
 DuckDB internally organizes data into:
 
@@ -81,7 +81,7 @@ Row Groups preserve logical organization even if physical storage changes.
 
 ---
 
-## ⚡ Vectorized Execution
+##  Vectorized Execution
 
 DuckDB processes data using vectors instead of row-by-row execution.
 
@@ -107,9 +107,9 @@ This causes fragmentation and cache locality issues.
 
 ---
 
-# 🏗️ Modified Architecture
+#  Modified Architecture
 
-## 🔄 Modified Write Path
+##  Modified Write Path
 
 ```text
 SQL Input
@@ -131,7 +131,7 @@ Flush to .duckdb file
 
 ---
 
-# 🛠️ Core Modification
+#  Core Modification
 
 Modified file:
 
@@ -159,7 +159,7 @@ This reduced block size by:
 
 ---
 
-# 🧪 Experimental Framework
+#  Experimental Framework
 
 We performed **10 experiments** to analyze the effect of fragmentation on DuckDB.
 
@@ -178,9 +178,9 @@ We performed **10 experiments** to analyze the effect of fragmentation on DuckDB
 
 ---
 
-# 🧪 Experiment 1 – Sequential Scan Performance
+#  Experiment 1 – Sequential Scan Performance
 
-## 🎯 Target
+##  Target
 
 Measure analytical query slowdown caused by fragmented blocks.
 
@@ -190,14 +190,14 @@ Measure analytical query slowdown caused by fragmented blocks.
 SELECT SUM(val) FROM perf_test;
 ```
 
-## 📈 Results
+##  Results
 
 | Configuration | Time |
 |---|---|
 | 256KB Blocks | 0.025s |
 | 4KB Blocks | 0.030s |
 
-## 🔍 Analysis
+##  Analysis
 
 Smaller blocks increased:
 
@@ -206,23 +206,23 @@ Smaller blocks increased:
 - Cache misses
 - BufferManager overhead
 
-## 💡 Insight
+##  Insight
 
 Large blocks are critical for analytical scan efficiency.
 
 ---
 
-# 🧪 Experiment 2 – WAL Growth Analysis
+#  Experiment 2 – WAL Growth Analysis
 
-## 🎯 Target
+##  Target
 
 Analyze WAL overhead under fragmentation.
 
-## 📈 Result
+##  Result
 
 The `.wal` file grew much faster in the 4KB version.
 
-## 🔍 Analysis
+##  Analysis
 
 Smaller blocks created:
 
@@ -230,19 +230,19 @@ Smaller blocks created:
 - More metadata markers
 - More fragmented writes
 
-## 💡 Insight
+##  Insight
 
 Fragmentation increases transactional logging overhead significantly.
 
 ---
 
-# 🧪 Experiment 3 – Row Group Fill Density
+#  Experiment 3 – Row Group Fill Density
 
-## 🎯 Target
+##  Target
 
 Check whether Row Groups fragment under 4KB blocks.
 
-## 📈 Result
+##  Result
 
 Both versions showed:
 
@@ -250,7 +250,7 @@ Both versions showed:
 12.288% fill density
 ```
 
-## 🔍 Analysis
+##  Analysis
 
 ```text
 122,880 / 1,000,000 = 12.288%
@@ -258,19 +258,19 @@ Both versions showed:
 
 Row Groups remained unchanged.
 
-## 💡 Insight
+##  Insight
 
 Row Groups are hard architectural invariants in DuckDB.
 
 ---
 
-# 🧪 Experiment 4 – VACUUM Stability Test
+#  Experiment 4 – VACUUM Stability Test
 
-## 🎯 Target
+##  Target
 
 Analyze storage reclamation after deletion.
 
-## 📈 Result
+##  Result
 
 Even after deleting 90% rows:
 
@@ -278,27 +278,27 @@ Even after deleting 90% rows:
 File size remained 18.2MB
 ```
 
-## 🔍 Analysis
+##  Analysis
 
 DuckDB cannot truncate blocks if even one row remains.
 
-## 💡 Insight
+##  Insight
 
 This behavior causes sparse block pinning.
 
 ---
 
-# 🧪 Experiment 5 – Self-Join Stress Test
+#  Experiment 5 – Self-Join Stress Test
 
-## 🎯 Target
+##  Target
 
 Stress metadata management and BufferManager.
 
-## 📈 Result
+##  Result
 
 Execution time increased dramatically.
 
-## 🔍 Analysis
+##  Analysis
 
 The engine repeatedly performed:
 
@@ -306,23 +306,23 @@ The engine repeatedly performed:
 - Metadata traversal
 - Fragmented page tracking
 
-## 💡 Insight
+##  Insight
 
 Metadata overhead can become larger than actual computation.
 
 ---
 
-# 🧪 Experiment 6 – Vector Alignment Analysis
+#  Experiment 6 – Vector Alignment Analysis
 
-## 🎯 Target
+##  Target
 
 Analyze vector-block mismatch.
 
-## 📈 Result
+##  Result
 
 Vectors became fragmented across multiple blocks.
 
-## 🔍 Analysis
+##  Analysis
 
 ```text
 16KB vectors → 4KB blocks
@@ -334,63 +334,63 @@ Result:
 1 vector → 4 blocks
 ```
 
-## 💡 Insight
+##  Insight
 
 Cache locality breaks when vectors no longer align with blocks.
 
 ---
 
-# 🧪 Experiment 7 – BufferManager Pressure Test
+#  Experiment 7 – BufferManager Pressure Test
 
-## 🎯 Target
+##  Target
 
 Measure BufferManager overhead.
 
-## 📈 Result
+##  Result
 
 Pin/unpin operations increased heavily.
 
-## 🔍 Analysis
+##  Analysis
 
 Tiny blocks forced the BufferManager to manage many more pages.
 
-## 💡 Insight
+##  Insight
 
 Fragmentation increases memory-management cost.
 
 ---
 
-# 🧪 Experiment 8 – Cache Locality Analysis
+#  Experiment 8 – Cache Locality Analysis
 
-## 🎯 Target
+##  Target
 
 Study CPU cache behavior.
 
-## 📈 Result
+##  Result
 
 4KB storage showed significantly worse cache locality.
 
-## 🔍 Analysis
+##  Analysis
 
 Fragmented blocks forced scattered memory access.
 
-## 💡 Insight
+##  Insight
 
 Analytical databases heavily depend on contiguous memory access.
 
 ---
 
-# 🧪 Experiment 9 – Fragmented Insert Workload
+#  Experiment 9 – Fragmented Insert Workload
 
-## 🎯 Target
+##  Target
 
 Analyze insertion overhead under fragmentation.
 
-## 📈 Result
+##  Result
 
 Insert operations generated highly fragmented writes.
 
-## 🔍 Analysis
+##  Analysis
 
 Small blocks increased:
 
@@ -398,33 +398,33 @@ Small blocks increased:
 - Metadata references
 - Write boundaries
 
-## 💡 Insight
+##  Insight
 
 Fragmentation amplifies write overhead.
 
 ---
 
-# 🧪 Experiment 10 – Checkpoint Flush Analysis
+#  Experiment 10 – Checkpoint Flush Analysis
 
-## 🎯 Target
+##  Target
 
 Analyze checkpoint flushing behavior.
 
-## 📈 Result
+##  Result
 
 Checkpoint flushing became metadata-heavy.
 
-## 🔍 Analysis
+##  Analysis
 
 CheckpointManager had to track many fragmented pages.
 
-## 💡 Insight
+##  Insight
 
 Fragmented storage increases checkpoint complexity.
 
 ---
 
-# ❌ Failure Analysis
+#  Failure Analysis
 
 | Failure Case | Related Experiment |
 |---|---|
@@ -437,7 +437,7 @@ Fragmented storage increases checkpoint complexity.
 
 ---
 
-# ❌ Failure Case 1 – Metadata Thrashing
+#  Failure Case 1 – Metadata Thrashing
 
 ### Related Experiment
 
@@ -455,7 +455,7 @@ The BufferManager had to manage:
 
 ---
 
-# ❌ Failure Case 2 – Vector Alignment Mismatch
+#  Failure Case 2 – Vector Alignment Mismatch
 
 ### Related Experiment
 
@@ -473,7 +473,7 @@ destroyed cache locality.
 
 ---
 
-# ❌ Failure Case 3 – BufferManager Pressure
+#  Failure Case 3 – BufferManager Pressure
 
 ### Related Experiment
 
@@ -487,7 +487,7 @@ Tiny blocks increased memory-management overhead.
 
 ---
 
-# ❌ Failure Case 4 – Cache Locality Breakdown
+#  Failure Case 4 – Cache Locality Breakdown
 
 ### Related Experiment
 
@@ -501,7 +501,7 @@ Fragmented blocks forced scattered memory access.
 
 ---
 
-# ❌ Failure Case 5 – Fragmented Write Amplification
+#  Failure Case 5 – Fragmented Write Amplification
 
 ### Related Experiment
 
@@ -515,7 +515,7 @@ More fragmented writes increased WAL and metadata overhead.
 
 ---
 
-# ❌ Failure Case 6 – Checkpoint Metadata Explosion
+#  Failure Case 6 – Checkpoint Metadata Explosion
 
 ### Related Experiment
 
@@ -529,9 +529,9 @@ Checkpoint flushing required tracking many fragmented pages.
 
 ---
 
-# 📌 Major Findings
+#  Major Findings
 
-## ✅ Finding 1 – Abstraction Layers Work
+##  Finding 1 – Abstraction Layers Work
 
 DuckDB successfully isolated:
 
@@ -547,7 +547,7 @@ Physical fragmentation
 
 ---
 
-## ✅ Finding 2 – Physical Grain Matters
+##  Finding 2 – Physical Grain Matters
 
 Performance dropped:
 
@@ -561,7 +561,7 @@ showing that:
 
 ---
 
-## ✅ Finding 3 – Metadata is the Hidden Bottleneck
+##  Finding 3 – Metadata is the Hidden Bottleneck
 
 Fragmentation wastes:
 
@@ -572,7 +572,7 @@ Fragmentation wastes:
 
 ---
 
-# 🚀 Final Conclusion
+#  Final Conclusion
 
 Even after reducing physical block size by:
 
@@ -604,7 +604,7 @@ This project proves that analytical database performance depends heavily on:
 
 ---
 
-# 🔧 How to Run the Modified Engine
+#  How to Run the Modified Engine
 
 ## Compilation
 
@@ -640,7 +640,7 @@ GROUP BY segment_type;
 
 ---
 
-# 📚 References
+#  References
 
 1. Raasveldt, M., & Mühleisen, H. (2019). *DuckDB: An Embeddable Analytical Database.*
 
