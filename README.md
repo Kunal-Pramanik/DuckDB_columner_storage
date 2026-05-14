@@ -25,7 +25,7 @@ The goal was to understand how low-level storage design impacts the performance 
 
 ---
 
-# 🎯 Research Objective
+#  Research Objective
 
 > Analyze the impact of reducing DuckDB’s physical block size from 256KB to 4KB and observe how it affects performance, storage management, vectorized execution, and metadata handling.
 
