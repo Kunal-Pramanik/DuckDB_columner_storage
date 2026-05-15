@@ -1,7 +1,7 @@
-# DS614 — DuckDB: Columnar Storage Engine Internals
+# 🦆 DS614: Big Data Engineering — DuckDB Columnar Storage Engine Analysis
 
 **Course:** DS614 — Big Data Engineering 
-**Topic:** DuckDB — Columnar Storage Engine & Block Size Architecture  
+**Topic:** DuckDB — Columnar Storage Engine 
 **Group:** Data Riders  
 **Members:** Kunal Pramanik & Jinal Sasiya  
 **Approach:** Systems-level reverse engineering using DuckDB C++ source code, physical constant modification, compiler patching, and structured stress experiments  
